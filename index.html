@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Extractor Info Promotor - Envío a Google Sheets</title>
+    <title>Extractor Info Promotor</title>
     <style>
         * {
             margin: 0;
@@ -113,17 +113,6 @@
 
         .btn-secondary:hover {
             background: #e2e8f0;
-        }
-
-        .btn-success {
-            background: #34a853;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #2d8e47;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
 
         .output-panel {
@@ -278,41 +267,6 @@
             background: #ef4444;
         }
 
-        .sheet-info {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: #e8f5e9;
-            border-radius: 0.75rem;
-            font-size: 0.75rem;
-            color: #2e7d32;
-            text-align: center;
-            border: 1px solid #c8e6c9;
-        }
-
-        .sheet-info a {
-            color: #1e5f2e;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .sheet-info a:hover {
-            text-decoration: underline;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         @media (max-width: 780px) {
             body {
                 padding: 1rem;
@@ -346,7 +300,7 @@
     <div class="hero">
         <h1>📋 Extractor Info Promotor</h1>
         <p>Pega el texto del promotor y automáticamente extraerá toda la información en los campos correspondientes</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">✏️ Haz clic en cualquier campo para editarlo antes de enviar a Google Sheets</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">✏️ Haz clic en cualquier campo para editarlo antes de copiar</p>
     </div>
 
     <div class="dashboard">
@@ -381,15 +335,9 @@ DATOS DEL CLIENTE
             <div class="fields-grid" id="fieldsContainer"></div>
 
             <div class="action-buttons">
-                <button id="sendToSheetsBtn" class="btn btn-success">📊 Enviar a Google Sheets</button>
                 <button id="copyToClipboardBtn" class="btn btn-copy">📋 Copiar datos (Excel)</button>
                 <button id="copyTextBtn" class="btn btn-copy" style="background: #3b82f6;">📝 Copiar solo texto</button>
                 <button id="clearFieldsBtn" class="btn btn-clear">🧹 Limpiar campos</button>
-            </div>
-            
-            <div class="sheet-info">
-                📌 Hoja de destino: <strong>Data</strong> en <a href="https://docs.google.com/spreadsheets/d/16CXC3NDTCUf-TkUKroLOSXPYSqiS2YQQzVfhT_R5lfQ/edit?gid=1487265249#gid=1487265249" target="_blank">Base de datos SIAC</a><br>
-                Los datos se agregarán automáticamente en la siguiente fila disponible
             </div>
         </div>
     </div>
@@ -398,14 +346,6 @@ DATOS DEL CLIENTE
 <div id="toastMessage" class="toast-msg">✅ Copiado al portapapeles</div>
 
 <script>
-    // Configuración de Google Sheets
-    const SPREADSHEET_ID = "16CXC3NDTCUf-TkUKroLOSXPYSqiS2YQQzVfhT_R5lfQ";
-    const SHEET_NAME = "Data";
-    
-    // URL del Web App de Google Apps Script (debes desplegar esto)
-    // IMPORTANTE: Debes crear y desplegar un Google Apps Script con el código proporcionado
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyxaxp1f8sPFCtPw4V3zw9koRYXTF3j0TJi73-jAo1xcS0h4JAl9MTyFdiXytC1cJ4mjA/exec"; // Reemplazar con tu URL
-    
     // Definición de los campos en el orden correcto
     const fieldsDefinition = [
         { id: "fecha_actual", label: "Fecha Actual", key: "fecha", editable: false },
@@ -683,63 +623,6 @@ DATOS DEL CLIENTE
             getValue('precio_paquete')
         ];
     }
-
-    async function sendToGoogleSheets() {
-        if (currentEditingField) {
-            saveCurrentEdit();
-        }
-        
-        const dataArray = getDataArray();
-        const hasData = dataArray.some(value => value !== "");
-        
-        if (!hasData) {
-            showToast("⚠️ No hay datos para enviar. Primero extrae información.", 'error');
-            return;
-        }
-        
-        // Mostrar mensaje de carga
-        const sendBtn = document.getElementById('sendToSheetsBtn');
-        const originalText = sendBtn.innerHTML;
-        sendBtn.innerHTML = '<span class="loading"></span> Enviando...';
-        sendBtn.disabled = true;
-        
-        try {
-            // Preparar los datos para enviar
-            const dataToSend = {
-                spreadsheetId: SPREADSHEET_ID,
-                sheetName: SHEET_NAME,
-                values: [dataArray]
-            };
-            
-            // Intentar enviar directamente usando fetch con el método POST
-            // Nota: Esto requiere un Web App de Google Apps Script desplegado
-            // Por ahora, abrimos la hoja y copiamos los datos al portapapeles
-            // con instrucciones claras
-            
-            // Abrir la hoja de Google Sheets
-            window.open(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit#gid=1487265249`, '_blank');
-            
-            // Crear el texto para copiar
-            const headers = ["Fecha Actual", "Validador", "Estatus", "Folio SIAC", "Tipo de Venta", 
-                            "Estrategia", "Gerente", "Clave de Promotor", "Nombre del Cliente", 
-                            "Celular Cliente", "Celular Adicional", "Correo Electrónico", 
-                            "Dirección Completa", "Megas", "Costo del Paquete"];
-            
-            const tsvData = headers.join("\t") + "\n" + dataArray.join("\t");
-            
-            // Copiar al portapapeles
-            await navigator.clipboard.writeText(tsvData);
-            
-            showToast("✅ Hoja abierta. Los datos están en el portapapeles. Ve a la hoja 'Data', selecciona la primera celda de la siguiente fila libre y pega (Ctrl+V).", 'success');
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showToast("❌ Error al enviar los datos. Por favor, copia manualmente.", 'error');
-        } finally {
-            sendBtn.innerHTML = originalText;
-            sendBtn.disabled = false;
-        }
-    }
     
     async function copyToClipboard(text, successMsg = "✅ Copiado al portapapeles") {
         if (currentEditingField) {
@@ -782,30 +665,8 @@ DATOS DEL CLIENTE
     }
 
     function getExcelData() {
-        const getValue = (fieldId) => {
-            const elem = uiElements[fieldId];
-            if (!elem) return "";
-            const value = elem.textContent;
-            return value === "—" ? "" : value;
-        };
-        
-        return [
-            getValue('fecha_actual'),
-            getValue('validador'),
-            getValue('estatus'),
-            getValue('folio_siac'),
-            getValue('tipo_venta'),
-            getValue('estrategia'),
-            getValue('gerente'),
-            getValue('clave_promotor'),
-            getValue('nombre_cliente'),
-            getValue('celular_cliente'),
-            getValue('celular_adicional'),
-            getValue('correo_cliente'),
-            getValue('direccion_completa'),
-            getValue('megas'),
-            getValue('precio_paquete')
-        ].join("\t");
+        const dataArray = getDataArray();
+        return dataArray.join("\t");
     }
 
     function getReadableText() {
@@ -887,7 +748,7 @@ DATOS DEL CLIENTE
         toast.style.opacity = '1';
         setTimeout(() => {
             toast.style.opacity = '0';
-        }, 5000);
+        }, 3000);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -895,7 +756,6 @@ DATOS DEL CLIENTE
         
         document.getElementById('extractBtn').addEventListener('click', performExtraction);
         document.getElementById('clearAllBtn').addEventListener('click', clearAll);
-        document.getElementById('sendToSheetsBtn').addEventListener('click', sendToGoogleSheets);
         document.getElementById('copyToClipboardBtn').addEventListener('click', copyExcelFormat);
         document.getElementById('copyTextBtn').addEventListener('click', copyTextFormat);
         document.getElementById('clearFieldsBtn').addEventListener('click', clearFieldsOnly);
