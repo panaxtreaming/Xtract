@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Extractor - Ventas SIAC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: -0.5px;
+        }
+
+        .hero p {
+            color: rgba(255,255,255,0.9);
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+        }
+
+        .input-panel {
+            flex: 1.2;
+            min-width: 280px;
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+        }
+
+        .input-panel textarea {
+            width: 100%;
+            height: 450px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            border: 2px solid #e2e8f0;
+            border-radius: 1rem;
+            resize: vertical;
+            outline: none;
+            transition: 0.2s;
+            line-height: 1.5;
+        }
+
+        .input-panel textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.3rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .output-panel {
+            flex: 1.8;
+            min-width: 360px;
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .date-badge {
+            background: #f1f5f9;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+            max-height: 550px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .field-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .field-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .field-value {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0f172a;
+            word-break: break-word;
+            min-height: 3rem;
+            line-height: 1.4;
+        }
+
+        .empty-field {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-copy {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #059669;
+        }
+
+        .btn-clear {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #dc2626;
+        }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .copy-success {
+            background: #10b981;
+        }
+
+        .copy-error {
+            background: #ef4444;
+        }
+
+        @media (max-width: 780px) {
+            body {
+                padding: 1rem;
+            }
+            .fields-grid {
+                max-height: 450px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="hero">
+        <h1>📋 Extractor Formato del Promotor</h1>
+        <p>Pega el texto del promotor y automáticamente extraerá toda la información en los campos correspondientes</p>
+    </div>
+
+    <div class="dashboard">
+        <div class="input-panel">
+            <label style="font-weight: 600; margin-bottom: 8px; display: block; color: #334155;">📄 Texto original del promotor</label>
+            <textarea id="rawTextInput" placeholder="Ejemplo:
+SERVICIO NUEVO: 31551859
+
+Gerente de zona: Abimael Gallegos García.
+Nombre del Promotor: Maribel Márquez García.
+Clave promotor: 345098
+
+DATOS DEL CLIENTE
+* Nombre del cliente: Ana María Ávalos De la Rosa 
+* Celular del cliente: 3316795042
+..."></textarea>
+            <div class="button-group">
+                <button id="extractBtn" class="btn btn-primary">✨ Extraer información</button>
+                <button id="clearAllBtn" class="btn btn-secondary">🗑️ Limpiar todo</button>
+            </div>
+            <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-radius: 0.75rem; font-size: 0.75rem; color: #92400e;">
+                💡 <strong>Consejo:</strong> El sistema extrae Tipo de Venta de la primera línea, dirección completa concatenada, y todos los datos del cliente.
+            </div>
+        </div>
+
+        <div class="output-panel">
+            <div class="card-header">
+                <h2>📌 Datos extraídos</h2>
+                <div class="date-badge" id="fechaActualDisplay"></div>
+            </div>
+
+            <div class="fields-grid" id="fieldsContainer"></div>
+
+            <div class="action-buttons">
+                <button id="copyToClipboardBtn" class="btn btn-copy">📋 Copiar datos (Excel)</button>
+                <button id="copyTextBtn" class="btn btn-copy" style="background: #3b82f6;">📝 Copiar solo texto</button>
+                <button id="clearFieldsBtn" class="btn btn-clear">🧹 Limpiar campos</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="toastMessage" class="toast-msg">✅ Copiado al portapapeles</div>
+
+<script>
+    // Definición de los campos en el orden correcto
+    const fieldsDefinition = [
+        { id: "fecha_actual", label: "Fecha Actual", key: "fecha" },
+        { id: "validador", label: "Validador", key: "validador" },
+        { id: "estatus", label: "Estatus", key: "estatus" },
+        { id: "folio_siac", label: "Folio SIAC", key: "folio" },
+        { id: "tipo_venta", label: "Tipo de Venta", key: "tipoVenta" },
+        { id: "estrategia", label: "Estrategia", key: "estrategia" },
+        { id: "gerente", label: "Gerente", key: "gerente" },
+        { id: "clave_promotor", label: "Clave de Promotor", key: "clavePromotor" },
+        { id: "nombre_cliente", label: "Nombre del Cliente", key: "nombreCliente" },
+        { id: "celular_cliente", label: "Celular Cliente", key: "celularCliente" },
+        { id: "celular_adicional", label: "Celular Adicional", key: "celularAdicional" },
+        { id: "correo_cliente", label: "Correo Electrónico", key: "correo" },
+        { id: "direccion_completa", label: "Dirección Completa", key: "direccionCompleta" },
+        { id: "megas", label: "Megas", key: "megas" },
+        { id: "precio_paquete", label: "Costo del Paquete", key: "precioPaquete" }
+    ];
+
+    let uiElements = {};
+
+    function buildUI() {
+        const container = document.getElementById('fieldsContainer');
+        container.innerHTML = '';
+        
+        // Agregar todos los campos en el orden definido
+        fieldsDefinition.forEach(field => {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'field-item';
+            fieldDiv.innerHTML = `
+                <div class="field-label">${field.label}</div>
+                <div class="field-value empty-field" id="${field.id}Val">—</div>
+            `;
+            container.appendChild(fieldDiv);
+            uiElements[field.id] = document.getElementById(`${field.id}Val`);
+        });
+        
+        updateDate();
+    }
+
+    function updateDate() {
+        const today = new Date();
+        // Formato dd/mm/aaaa
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        const formattedDate = `${day}/${month}/${year}`;
+        
+        // Actualizar el campo de fecha actual
+        if (uiElements['fecha_actual']) {
+            uiElements['fecha_actual'].innerText = formattedDate;
+            uiElements['fecha_actual'].classList.remove('empty-field');
+        }
+        
+        // También actualizar el badge superior
+        const fechaElem = document.getElementById('fechaActualDisplay');
+        if (fechaElem) fechaElem.innerText = `📅 ${formattedDate}`;
+    }
+
+    // Función para concatenar dirección completa
+    function buildFullAddress(data) {
+        const parts = [];
+        if (data.direccion1) parts.push(`Calle y número ${data.direccion1}`);
+        if (data.direccion2 && data.direccion3) {
+            parts.push(`Entre calle ${data.direccion2} y calle ${data.direccion3}`);
+        } else if (data.direccion2) {
+            parts.push(`Entre calle ${data.direccion2}`);
+        } else if (data.direccion3) {
+            parts.push(`Entre calle ${data.direccion3}`);
+        }
+        if (data.colonia) parts.push(`Colonia ${data.colonia}`);
+        if (data.municipio) parts.push(`Municipio ${data.municipio}`);
+        if (data.cp) parts.push(`Código postal ${data.cp}`);
+        
+        return parts.join(' ');
+    }
+
+    // Función principal de extracción
+    function extractData(text) {
+        const data = {};
+        
+        // 1. Extraer primera línea para Tipo de Venta y posible Folio
+        const lines = text.split('\n');
+        const firstLine = lines[0].trim();
+        
+        // Extraer Tipo de Venta (todo lo que está antes de los dos puntos o la primera palabra)
+        if (firstLine.includes(':')) {
+            const tipoMatch = firstLine.match(/^([^:]+)/);
+            data.tipoVenta = tipoMatch ? tipoMatch[1].trim() : "";
+            
+            // Extraer Folio SIAC (después de los dos puntos)
+            const folioMatch = firstLine.match(/:\s*(\d+)/);
+            data.folio = folioMatch ? folioMatch[1].trim() : "";
+        } else {
+            // Si no hay dos puntos, tomar la primera línea completa como tipo de venta
+            data.tipoVenta = firstLine;
+            data.folio = "";
+        }
+        
+        // 2. Extraer Gerente
+        const gerenteMatch = text.match(/Gerente de zona:\s*([^\n]+)/i);
+        data.gerente = gerenteMatch ? gerenteMatch[1].trim().replace(/\.$/, '') : "";
+        
+        // 3. Extraer Nombre del Promotor
+        const promotorMatch = text.match(/Nombre del Promotor:\s*([^\n]+)/i);
+        data.nombrePromotor = promotorMatch ? promotorMatch[1].trim().replace(/\.$/, '') : "";
+        
+        // 4. Extraer Clave promotor
+        const claveMatch = text.match(/Clave promotor:\s*(\d+)/i);
+        data.clavePromotor = claveMatch ? claveMatch[1].trim() : "";
+        
+        // 5. Extraer datos del cliente
+        const nombreMatch = text.match(/\*\s*Nombre del cliente:\s*([^\n]+)/i);
+        data.nombreCliente = nombreMatch ? nombreMatch[1].trim() : "";
+        
+        const celularMatch = text.match(/\*\s*Celular del cliente:\s*([^\n]+)/i);
+        data.celularCliente = celularMatch ? celularMatch[1].trim() : "";
+        
+        const celularAdicMatch = text.match(/\*\s*Celular adicional\s*\d*:\s*([^\n]+)/i);
+        data.celularAdicional = celularAdicMatch ? celularAdicMatch[1].trim() : "";
+        
+        const correoMatch = text.match(/\*\s*Correo:\s*([^\n]+)/i);
+        data.correo = correoMatch ? correoMatch[1].trim() : "";
+        
+        // 6. Extraer domicilio por partes
+        const calleMatch = text.match(/\*\s*Calle y número:\s*([^\n]+)/i);
+        data.direccion1 = calleMatch ? calleMatch[1].trim() : "";
+        
+        const entre1Match = text.match(/\*\s*Entre calle 1:\s*([^\n]+)/i);
+        data.direccion2 = entre1Match ? entre1Match[1].trim() : "";
+        
+        const entre2Match = text.match(/\*\s*Entre calle 2:\s*([^\n]+)/i);
+        data.direccion3 = entre2Match ? entre2Match[1].trim() : "";
+        
+        const coloniaMatch = text.match(/\*\s*Colonia:\s*([^\n]+)/i);
+        data.colonia = coloniaMatch ? coloniaMatch[1].trim() : "";
+        
+        const municipioMatch = text.match(/\*\s*Municipio:\s*([^\n]+)/i);
+        data.municipio = municipioMatch ? municipioMatch[1].trim() : "";
+        
+        const cpMatch = text.match(/\*\s*Código postal:\s*(\d+)/i);
+        data.cp = cpMatch ? cpMatch[1].trim() : "";
+        
+        // Construir dirección completa
+        data.direccionCompleta = buildFullAddress(data);
+        
+        // 7. Extraer información del paquete
+        const precioMatch = text.match(/\$\s*Precio del Paquete:\s*\$([^\n]+)/i);
+        data.precioPaquete = precioMatch ? `$${precioMatch[1].trim()}` : "";
+        
+        const megasMatch = text.match(/Megas:\s*(\d+(?:\.\d+)?)\s*(?:mg|mbps|Mbps)?/i);
+        data.megas = megasMatch ? `${megasMatch[1]} Mbps` : "";
+        
+        // 8. Extraer Estrategia (Célula)
+        const celulaMatch = text.match(/Célula:\s*(\d+)/i);
+        data.estrategia = celulaMatch ? celulaMatch[1].trim() : "";
+        
+        return data;
+    }
+
+    function populateFields(data) {
+        // Mapear datos a los campos UI
+        const mapping = {
+            'validador': "", // Siempre vacío
+            'estatus': "", // Siempre vacío
+            'folio_siac': data.folio || "",
+            'tipo_venta': data.tipoVenta || "",
+            'estrategia': data.estrategia || "",
+            'gerente': data.gerente || "",
+            'clave_promotor': data.clavePromotor || "",
+            'nombre_cliente': data.nombreCliente || "",
+            'celular_cliente': data.celularCliente || "",
+            'celular_adicional': data.celularAdicional || "",
+            'correo_cliente': data.correo || "",
+            'direccion_completa': data.direccionCompleta || "",
+            'megas': data.megas || "",
+            'precio_paquete': data.precioPaquete || ""
+        };
+        
+        for (const [fieldId, value] of Object.entries(mapping)) {
+            if (uiElements[fieldId]) {
+                if (value && value.trim() !== "") {
+                    uiElements[fieldId].innerText = value;
+                    uiElements[fieldId].classList.remove('empty-field');
+                } else {
+                    uiElements[fieldId].innerText = "—";
+                    uiElements[fieldId].classList.add('empty-field');
+                }
+            }
+        }
+        
+        // La fecha ya se actualiza en buildUI y updateDate, pero asegurarse
+        updateDate();
+    }
+
+    // Función mejorada para copiar al portapapeles con múltiples métodos de respaldo
+    async function copyToClipboard(text, successMsg = "✅ Copiado al portapapeles") {
+        // Método 1: Usar la API moderna de clipboard (requiere HTTPS o localhost)
+        if (navigator.clipboard && window.isSecureContext) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast(successMsg, 'success');
+                return true;
+            } catch (err) {
+                console.warn('Clipboard API falló:', err);
+                // Continuar con el método de respaldo
+            }
+        }
+        
+        // Método 2: Usar execCommand (método tradicional)
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-999999px';
+            textarea.style.top = '-999999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            if (successful) {
+                showToast(successMsg, 'success');
+                return true;
+            } else {
+                throw new Error('execCommand falló');
+            }
+        } catch (err) {
+            console.error('Error al copiar:', err);
+            showToast('❌ No se pudo copiar. Por favor, selecciona y copia manualmente.', 'error');
+            return false;
+        }
+    }
+
+    // Obtener solo los datos para Excel (sin encabezados, solo valores separados por tabulaciones)
+    function getExcelData() {
+        const getValue = (fieldId) => {
+            const elem = uiElements[fieldId];
+            if (!elem) return "";
+            const value = elem.innerText;
+            return value === "—" ? "" : value;
+        };
+        
+        const values = [
+            getValue('fecha_actual'),
+            getValue('validador'),
+            getValue('estatus'),
+            getValue('folio_siac'),
+            getValue('tipo_venta'),
+            getValue('estrategia'),
+            getValue('gerente'),
+            getValue('clave_promotor'),
+            getValue('nombre_cliente'),
+            getValue('celular_cliente'),
+            getValue('celular_adicional'),
+            getValue('correo_cliente'),
+            getValue('direccion_completa'),
+            getValue('megas'),
+            getValue('precio_paquete')
+        ];
+        
+        // Devolver solo los valores separados por tabulaciones, sin encabezados
+        return values.join("\t");
+    }
+
+    // Obtener solo el texto legible de los campos (sin etiquetas, solo valores)
+    function getReadableText() {
+        const getValue = (fieldId) => {
+            const elem = uiElements[fieldId];
+            if (!elem) return null;
+            const value = elem.innerText;
+            if (value === "—" || value === "") return null;
+            return value;
+        };
+        
+        const fieldIds = [
+            'fecha_actual',
+            'validador',
+            'estatus',
+            'folio_siac',
+            'tipo_venta',
+            'estrategia',
+            'gerente',
+            'clave_promotor',
+            'nombre_cliente',
+            'celular_cliente',
+            'celular_adicional',
+            'correo_cliente',
+            'direccion_completa',
+            'megas',
+            'precio_paquete'
+        ];
+        
+        const values = [];
+        for (const fieldId of fieldIds) {
+            const value = getValue(fieldId);
+            if (value) values.push(value);
+        }
+        
+        // Devolver los valores separados por saltos de línea
+        return values.join('\n');
+    }
+
+    function performExtraction() {
+        const rawText = document.getElementById('rawTextInput').value;
+        if (!rawText.trim()) {
+            showToast("⚠️ Por favor, pega el texto del promotor primero.", 'error');
+            return;
+        }
+        
+        const extractedData = extractData(rawText);
+        populateFields(extractedData);
+        showToast("✅ Extracción completada exitosamente", 'success');
+    }
+
+    function clearAll() {
+        document.getElementById('rawTextInput').value = '';
+        const emptyData = {};
+        populateFields(emptyData);
+        showToast("🧹 Todos los datos fueron limpiados", 'success');
+    }
+
+    function clearFieldsOnly() {
+        const emptyData = {};
+        populateFields(emptyData);
+        showToast("Campos de salida reiniciados", 'success');
+    }
+
+    async function copyExcelFormat() {
+        const excelData = getExcelData();
+        await copyToClipboard(excelData, "📋 Datos copiados (formato Excel). ¡Listo para pegar!");
+    }
+
+    async function copyTextFormat() {
+        const textData = getReadableText();
+        await copyToClipboard(textData, "📝 Datos copiados en formato texto");
+    }
+
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toastMessage');
+        toast.innerText = msg;
+        toast.className = `toast-msg ${type === 'error' ? 'copy-error' : 'copy-success'}`;
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 3000);
+    }
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        buildUI();
+        
+        // Configurar eventos
+        document.getElementById('extractBtn').addEventListener('click', performExtraction);
+        document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+        document.getElementById('copyToClipboardBtn').addEventListener('click', copyExcelFormat);
+        document.getElementById('copyTextBtn').addEventListener('click', copyTextFormat);
+        document.getElementById('clearFieldsBtn').addEventListener('click', clearFieldsOnly);
+        
+        // Textarea inicialmente vacío
+        document.getElementById('rawTextInput').value = '';
+    });
+</script>
+</body>
+</html>
