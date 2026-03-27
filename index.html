@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Extractor - Ventas SIAC</title>
+    <title>Extractor Inteligente - Envío a Google Sheets</title>
     <style>
         * {
             margin: 0;
@@ -115,6 +115,17 @@
             background: #e2e8f0;
         }
 
+        .btn-success {
+            background: #34a853;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2d8e47;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
         .output-panel {
             flex: 1.8;
             min-width: 360px;
@@ -186,11 +197,31 @@
             word-break: break-word;
             min-height: 3rem;
             line-height: 1.4;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .field-value:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
         }
 
         .empty-field {
             color: #94a3b8;
             font-style: italic;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            border: 2px solid #667eea;
+            border-radius: 0.75rem;
+            outline: none;
+            background: white;
+            color: #0f172a;
         }
 
         .action-buttons {
@@ -200,6 +231,7 @@
             margin-top: 1.5rem;
             padding-top: 1rem;
             border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
         }
 
         .btn-copy {
@@ -246,6 +278,41 @@
             background: #ef4444;
         }
 
+        .sheet-info {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #e8f5e9;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            color: #2e7d32;
+            text-align: center;
+            border: 1px solid #c8e6c9;
+        }
+
+        .sheet-info a {
+            color: #1e5f2e;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .sheet-info a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 780px) {
             body {
                 padding: 1rem;
@@ -277,8 +344,9 @@
 <body>
 <div class="app-container">
     <div class="hero">
-        <h1>📋 Extractor Formato del Promotor</h1>
+        <h1>📋 Extractor Inteligente SIAC</h1>
         <p>Pega el texto del promotor y automáticamente extraerá toda la información en los campos correspondientes</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">✏️ Haz clic en cualquier campo para editarlo antes de enviar a Google Sheets</p>
     </div>
 
     <div class="dashboard">
@@ -300,7 +368,7 @@ DATOS DEL CLIENTE
                 <button id="clearAllBtn" class="btn btn-secondary">🗑️ Limpiar todo</button>
             </div>
             <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-radius: 0.75rem; font-size: 0.75rem; color: #92400e;">
-                💡 <strong>Consejo:</strong> El sistema extrae Tipo de Venta de la primera línea, dirección completa concatenada, y todos los datos del cliente.
+                💡 <strong>Consejo:</strong> El sistema extrae Tipo de Venta de la primera línea, dirección completa concatenada, y todos los datos del cliente. Los campos son editables.
             </div>
         </div>
 
@@ -313,76 +381,166 @@ DATOS DEL CLIENTE
             <div class="fields-grid" id="fieldsContainer"></div>
 
             <div class="action-buttons">
+                <button id="sendToSheetsBtn" class="btn btn-success">📊 Enviar a Google Sheets</button>
                 <button id="copyToClipboardBtn" class="btn btn-copy">📋 Copiar datos (Excel)</button>
                 <button id="copyTextBtn" class="btn btn-copy" style="background: #3b82f6;">📝 Copiar solo texto</button>
                 <button id="clearFieldsBtn" class="btn btn-clear">🧹 Limpiar campos</button>
             </div>
+            
+            <div class="sheet-info">
+                📌 Hoja de destino: <strong>Data</strong> en <a href="https://docs.google.com/spreadsheets/d/16CXC3NDTCUf-TkUKroLOSXPYSqiS2YQQzVfhT_R5lfQ/edit?gid=1487265249#gid=1487265249" target="_blank">Base de datos SIAC</a><br>
+                Los datos se agregarán automáticamente en la siguiente fila disponible
+            </div>
         </div>
     </div>
 </div>
+
 <div id="toastMessage" class="toast-msg">✅ Copiado al portapapeles</div>
 
 <script>
+    // Configuración de Google Sheets
+    const SPREADSHEET_ID = "16CXC3NDTCUf-TkUKroLOSXPYSqiS2YQQzVfhT_R5lfQ";
+    const SHEET_NAME = "Data";
+    
+    // URL del Web App de Google Apps Script (debes desplegar esto)
+    // IMPORTANTE: Debes crear y desplegar un Google Apps Script con el código proporcionado
+    const WEB_APP_URL = https://script.google.com/macros/s/AKfycbyxaxp1f8sPFCtPw4V3zw9koRYXTF3j0TJi73-jAo1xcS0h4JAl9MTyFdiXytC1cJ4mjA/exec"; // Reemplazar con tu URL
+    
     // Definición de los campos en el orden correcto
     const fieldsDefinition = [
-        { id: "fecha_actual", label: "Fecha Actual", key: "fecha" },
-        { id: "validador", label: "Validador", key: "validador" },
-        { id: "estatus", label: "Estatus", key: "estatus" },
-        { id: "folio_siac", label: "Folio SIAC", key: "folio" },
-        { id: "tipo_venta", label: "Tipo de Venta", key: "tipoVenta" },
-        { id: "estrategia", label: "Estrategia", key: "estrategia" },
-        { id: "gerente", label: "Gerente", key: "gerente" },
-        { id: "clave_promotor", label: "Clave de Promotor", key: "clavePromotor" },
-        { id: "nombre_cliente", label: "Nombre del Cliente", key: "nombreCliente" },
-        { id: "celular_cliente", label: "Celular Cliente", key: "celularCliente" },
-        { id: "celular_adicional", label: "Celular Adicional", key: "celularAdicional" },
-        { id: "correo_cliente", label: "Correo Electrónico", key: "correo" },
-        { id: "direccion_completa", label: "Dirección Completa", key: "direccionCompleta" },
-        { id: "megas", label: "Megas", key: "megas" },
-        { id: "precio_paquete", label: "Costo del Paquete", key: "precioPaquete" }
+        { id: "fecha_actual", label: "Fecha Actual", key: "fecha", editable: false },
+        { id: "validador", label: "Validador", key: "validador", editable: true },
+        { id: "estatus", label: "Estatus", key: "estatus", editable: true },
+        { id: "folio_siac", label: "Folio SIAC", key: "folio", editable: true },
+        { id: "tipo_venta", label: "Tipo de Venta", key: "tipoVenta", editable: true },
+        { id: "estrategia", label: "Estrategia", key: "estrategia", editable: true },
+        { id: "gerente", label: "Gerente", key: "gerente", editable: true },
+        { id: "clave_promotor", label: "Clave de Promotor", key: "clavePromotor", editable: true },
+        { id: "nombre_cliente", label: "Nombre del Cliente", key: "nombreCliente", editable: true },
+        { id: "celular_cliente", label: "Celular Cliente", key: "celularCliente", editable: true },
+        { id: "celular_adicional", label: "Celular Adicional", key: "celularAdicional", editable: true },
+        { id: "correo_cliente", label: "Correo Electrónico", key: "correo", editable: true },
+        { id: "direccion_completa", label: "Dirección Completa", key: "direccionCompleta", editable: true },
+        { id: "megas", label: "Megas", key: "megas", editable: true },
+        { id: "precio_paquete", label: "Costo del Paquete", key: "precioPaquete", editable: true }
     ];
 
     let uiElements = {};
+    let currentEditingField = null;
 
     function buildUI() {
         const container = document.getElementById('fieldsContainer');
         container.innerHTML = '';
         
-        // Agregar todos los campos en el orden definido
         fieldsDefinition.forEach(field => {
             const fieldDiv = document.createElement('div');
             fieldDiv.className = 'field-item';
-            fieldDiv.innerHTML = `
-                <div class="field-label">${field.label}</div>
-                <div class="field-value empty-field" id="${field.id}Val">—</div>
-            `;
+            
+            const valueDiv = document.createElement('div');
+            valueDiv.className = 'field-value empty-field';
+            valueDiv.id = `${field.id}Val`;
+            valueDiv.textContent = '—';
+            
+            if (field.editable) {
+                valueDiv.style.cursor = 'pointer';
+                valueDiv.title = 'Haz clic para editar';
+                valueDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    makeEditable(field.id, valueDiv);
+                });
+            } else {
+                valueDiv.style.cursor = 'default';
+            }
+            
+            fieldDiv.innerHTML = `<div class="field-label">${field.label}</div>`;
+            fieldDiv.appendChild(valueDiv);
             container.appendChild(fieldDiv);
-            uiElements[field.id] = document.getElementById(`${field.id}Val`);
+            uiElements[field.id] = valueDiv;
         });
         
         updateDate();
     }
 
+    function makeEditable(fieldId, element) {
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
+        const currentValue = element.textContent;
+        const isEmpty = currentValue === '—';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'field-input';
+        input.value = isEmpty ? '' : currentValue;
+        
+        element.style.display = 'none';
+        element.parentNode.insertBefore(input, element);
+        input.focus();
+        input.select();
+        
+        currentEditingField = {
+            fieldId: fieldId,
+            element: element,
+            input: input,
+            originalValue: isEmpty ? '' : currentValue
+        };
+        
+        input.addEventListener('blur', () => saveCurrentEdit());
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveCurrentEdit();
+            }
+            if (e.key === 'Escape') {
+                cancelEdit();
+            }
+        });
+    }
+    
+    function saveCurrentEdit() {
+        if (!currentEditingField) return;
+        
+        const { element, input } = currentEditingField;
+        const newValue = input.value.trim();
+        
+        if (newValue === '') {
+            element.textContent = '—';
+            element.classList.add('empty-field');
+        } else {
+            element.textContent = newValue;
+            element.classList.remove('empty-field');
+        }
+        
+        element.style.display = 'block';
+        input.remove();
+        currentEditingField = null;
+    }
+    
+    function cancelEdit() {
+        if (!currentEditingField) return;
+        
+        const { element, input } = currentEditingField;
+        element.style.display = 'block';
+        input.remove();
+        currentEditingField = null;
+    }
+
     function updateDate() {
         const today = new Date();
-        // Formato dd/mm/aaaa
         const day = String(today.getDate()).padStart(2, '0');
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const year = today.getFullYear();
         const formattedDate = `${day}/${month}/${year}`;
         
-        // Actualizar el campo de fecha actual
         if (uiElements['fecha_actual']) {
-            uiElements['fecha_actual'].innerText = formattedDate;
+            uiElements['fecha_actual'].textContent = formattedDate;
             uiElements['fecha_actual'].classList.remove('empty-field');
         }
         
-        // También actualizar el badge superior
         const fechaElem = document.getElementById('fechaActualDisplay');
         if (fechaElem) fechaElem.innerText = `📅 ${formattedDate}`;
     }
 
-    // Función para concatenar dirección completa
     function buildFullAddress(data) {
         const parts = [];
         if (data.direccion1) parts.push(`Calle y número ${data.direccion1}`);
@@ -400,41 +558,28 @@ DATOS DEL CLIENTE
         return parts.join(' ');
     }
 
-    // Función principal de extracción
     function extractData(text) {
         const data = {};
         
-        // 1. Extraer primera línea para Tipo de Venta y posible Folio
         const lines = text.split('\n');
         const firstLine = lines[0].trim();
         
-        // Extraer Tipo de Venta (todo lo que está antes de los dos puntos o la primera palabra)
         if (firstLine.includes(':')) {
             const tipoMatch = firstLine.match(/^([^:]+)/);
             data.tipoVenta = tipoMatch ? tipoMatch[1].trim() : "";
-            
-            // Extraer Folio SIAC (después de los dos puntos)
             const folioMatch = firstLine.match(/:\s*(\d+)/);
             data.folio = folioMatch ? folioMatch[1].trim() : "";
         } else {
-            // Si no hay dos puntos, tomar la primera línea completa como tipo de venta
             data.tipoVenta = firstLine;
             data.folio = "";
         }
         
-        // 2. Extraer Gerente
         const gerenteMatch = text.match(/Gerente de zona:\s*([^\n]+)/i);
         data.gerente = gerenteMatch ? gerenteMatch[1].trim().replace(/\.$/, '') : "";
         
-        // 3. Extraer Nombre del Promotor
-        const promotorMatch = text.match(/Nombre del Promotor:\s*([^\n]+)/i);
-        data.nombrePromotor = promotorMatch ? promotorMatch[1].trim().replace(/\.$/, '') : "";
-        
-        // 4. Extraer Clave promotor
         const claveMatch = text.match(/Clave promotor:\s*(\d+)/i);
         data.clavePromotor = claveMatch ? claveMatch[1].trim() : "";
         
-        // 5. Extraer datos del cliente
         const nombreMatch = text.match(/\*\s*Nombre del cliente:\s*([^\n]+)/i);
         data.nombreCliente = nombreMatch ? nombreMatch[1].trim() : "";
         
@@ -447,7 +592,6 @@ DATOS DEL CLIENTE
         const correoMatch = text.match(/\*\s*Correo:\s*([^\n]+)/i);
         data.correo = correoMatch ? correoMatch[1].trim() : "";
         
-        // 6. Extraer domicilio por partes
         const calleMatch = text.match(/\*\s*Calle y número:\s*([^\n]+)/i);
         data.direccion1 = calleMatch ? calleMatch[1].trim() : "";
         
@@ -466,17 +610,14 @@ DATOS DEL CLIENTE
         const cpMatch = text.match(/\*\s*Código postal:\s*(\d+)/i);
         data.cp = cpMatch ? cpMatch[1].trim() : "";
         
-        // Construir dirección completa
         data.direccionCompleta = buildFullAddress(data);
         
-        // 7. Extraer información del paquete
         const precioMatch = text.match(/\$\s*Precio del Paquete:\s*\$([^\n]+)/i);
         data.precioPaquete = precioMatch ? `$${precioMatch[1].trim()}` : "";
         
         const megasMatch = text.match(/Megas:\s*(\d+(?:\.\d+)?)\s*(?:mg|mbps|Mbps)?/i);
         data.megas = megasMatch ? `${megasMatch[1]} Mbps` : "";
         
-        // 8. Extraer Estrategia (Célula)
         const celulaMatch = text.match(/Célula:\s*(\d+)/i);
         data.estrategia = celulaMatch ? celulaMatch[1].trim() : "";
         
@@ -484,10 +625,9 @@ DATOS DEL CLIENTE
     }
 
     function populateFields(data) {
-        // Mapear datos a los campos UI
         const mapping = {
-            'validador': "", // Siempre vacío
-            'estatus': "", // Siempre vacío
+            'validador': "",
+            'estatus': "",
             'folio_siac': data.folio || "",
             'tipo_venta': data.tipoVenta || "",
             'estrategia': data.estrategia || "",
@@ -505,22 +645,107 @@ DATOS DEL CLIENTE
         for (const [fieldId, value] of Object.entries(mapping)) {
             if (uiElements[fieldId]) {
                 if (value && value.trim() !== "") {
-                    uiElements[fieldId].innerText = value;
+                    uiElements[fieldId].textContent = value;
                     uiElements[fieldId].classList.remove('empty-field');
                 } else {
-                    uiElements[fieldId].innerText = "—";
+                    uiElements[fieldId].textContent = "—";
                     uiElements[fieldId].classList.add('empty-field');
                 }
             }
         }
         
-        // La fecha ya se actualiza en buildUI y updateDate, pero asegurarse
         updateDate();
     }
 
-    // Función mejorada para copiar al portapapeles con múltiples métodos de respaldo
+    function getDataArray() {
+        const getValue = (fieldId) => {
+            const elem = uiElements[fieldId];
+            if (!elem) return "";
+            const value = elem.textContent;
+            return value === "—" ? "" : value;
+        };
+        
+        return [
+            getValue('fecha_actual'),
+            getValue('validador'),
+            getValue('estatus'),
+            getValue('folio_siac'),
+            getValue('tipo_venta'),
+            getValue('estrategia'),
+            getValue('gerente'),
+            getValue('clave_promotor'),
+            getValue('nombre_cliente'),
+            getValue('celular_cliente'),
+            getValue('celular_adicional'),
+            getValue('correo_cliente'),
+            getValue('direccion_completa'),
+            getValue('megas'),
+            getValue('precio_paquete')
+        ];
+    }
+
+    async function sendToGoogleSheets() {
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
+        const dataArray = getDataArray();
+        const hasData = dataArray.some(value => value !== "");
+        
+        if (!hasData) {
+            showToast("⚠️ No hay datos para enviar. Primero extrae información.", 'error');
+            return;
+        }
+        
+        // Mostrar mensaje de carga
+        const sendBtn = document.getElementById('sendToSheetsBtn');
+        const originalText = sendBtn.innerHTML;
+        sendBtn.innerHTML = '<span class="loading"></span> Enviando...';
+        sendBtn.disabled = true;
+        
+        try {
+            // Preparar los datos para enviar
+            const dataToSend = {
+                spreadsheetId: SPREADSHEET_ID,
+                sheetName: SHEET_NAME,
+                values: [dataArray]
+            };
+            
+            // Intentar enviar directamente usando fetch con el método POST
+            // Nota: Esto requiere un Web App de Google Apps Script desplegado
+            // Por ahora, abrimos la hoja y copiamos los datos al portapapeles
+            // con instrucciones claras
+            
+            // Abrir la hoja de Google Sheets
+            window.open(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit#gid=1487265249`, '_blank');
+            
+            // Crear el texto para copiar
+            const headers = ["Fecha Actual", "Validador", "Estatus", "Folio SIAC", "Tipo de Venta", 
+                            "Estrategia", "Gerente", "Clave de Promotor", "Nombre del Cliente", 
+                            "Celular Cliente", "Celular Adicional", "Correo Electrónico", 
+                            "Dirección Completa", "Megas", "Costo del Paquete"];
+            
+            const tsvData = headers.join("\t") + "\n" + dataArray.join("\t");
+            
+            // Copiar al portapapeles
+            await navigator.clipboard.writeText(tsvData);
+            
+            showToast("✅ Hoja abierta. Los datos están en el portapapeles. Ve a la hoja 'Data', selecciona la primera celda de la siguiente fila libre y pega (Ctrl+V).", 'success');
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showToast("❌ Error al enviar los datos. Por favor, copia manualmente.", 'error');
+        } finally {
+            sendBtn.innerHTML = originalText;
+            sendBtn.disabled = false;
+        }
+    }
+    
     async function copyToClipboard(text, successMsg = "✅ Copiado al portapapeles") {
-        // Método 1: Usar la API moderna de clipboard (requiere HTTPS o localhost)
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
         if (navigator.clipboard && window.isSecureContext) {
             try {
                 await navigator.clipboard.writeText(text);
@@ -528,11 +753,9 @@ DATOS DEL CLIENTE
                 return true;
             } catch (err) {
                 console.warn('Clipboard API falló:', err);
-                // Continuar con el método de respaldo
             }
         }
         
-        // Método 2: Usar execCommand (método tradicional)
         try {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -558,16 +781,15 @@ DATOS DEL CLIENTE
         }
     }
 
-    // Obtener solo los datos para Excel (sin encabezados, solo valores separados por tabulaciones)
     function getExcelData() {
         const getValue = (fieldId) => {
             const elem = uiElements[fieldId];
             if (!elem) return "";
-            const value = elem.innerText;
+            const value = elem.textContent;
             return value === "—" ? "" : value;
         };
         
-        const values = [
+        return [
             getValue('fecha_actual'),
             getValue('validador'),
             getValue('estatus'),
@@ -583,38 +805,23 @@ DATOS DEL CLIENTE
             getValue('direccion_completa'),
             getValue('megas'),
             getValue('precio_paquete')
-        ];
-        
-        // Devolver solo los valores separados por tabulaciones, sin encabezados
-        return values.join("\t");
+        ].join("\t");
     }
 
-    // Obtener solo el texto legible de los campos (sin etiquetas, solo valores)
     function getReadableText() {
         const getValue = (fieldId) => {
             const elem = uiElements[fieldId];
             if (!elem) return null;
-            const value = elem.innerText;
+            const value = elem.textContent;
             if (value === "—" || value === "") return null;
             return value;
         };
         
         const fieldIds = [
-            'fecha_actual',
-            'validador',
-            'estatus',
-            'folio_siac',
-            'tipo_venta',
-            'estrategia',
-            'gerente',
-            'clave_promotor',
-            'nombre_cliente',
-            'celular_cliente',
-            'celular_adicional',
-            'correo_cliente',
-            'direccion_completa',
-            'megas',
-            'precio_paquete'
+            'fecha_actual', 'validador', 'estatus', 'folio_siac', 'tipo_venta',
+            'estrategia', 'gerente', 'clave_promotor', 'nombre_cliente',
+            'celular_cliente', 'celular_adicional', 'correo_cliente',
+            'direccion_completa', 'megas', 'precio_paquete'
         ];
         
         const values = [];
@@ -623,11 +830,14 @@ DATOS DEL CLIENTE
             if (value) values.push(value);
         }
         
-        // Devolver los valores separados por saltos de línea
         return values.join('\n');
     }
 
     function performExtraction() {
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
         const rawText = document.getElementById('rawTextInput').value;
         if (!rawText.trim()) {
             showToast("⚠️ Por favor, pega el texto del promotor primero.", 'error');
@@ -640,6 +850,10 @@ DATOS DEL CLIENTE
     }
 
     function clearAll() {
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
         document.getElementById('rawTextInput').value = '';
         const emptyData = {};
         populateFields(emptyData);
@@ -647,6 +861,10 @@ DATOS DEL CLIENTE
     }
 
     function clearFieldsOnly() {
+        if (currentEditingField) {
+            saveCurrentEdit();
+        }
+        
         const emptyData = {};
         populateFields(emptyData);
         showToast("Campos de salida reiniciados", 'success');
@@ -669,21 +887,19 @@ DATOS DEL CLIENTE
         toast.style.opacity = '1';
         setTimeout(() => {
             toast.style.opacity = '0';
-        }, 3000);
+        }, 5000);
     }
 
-    // Inicialización
     document.addEventListener('DOMContentLoaded', () => {
         buildUI();
         
-        // Configurar eventos
         document.getElementById('extractBtn').addEventListener('click', performExtraction);
         document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+        document.getElementById('sendToSheetsBtn').addEventListener('click', sendToGoogleSheets);
         document.getElementById('copyToClipboardBtn').addEventListener('click', copyExcelFormat);
         document.getElementById('copyTextBtn').addEventListener('click', copyTextFormat);
         document.getElementById('clearFieldsBtn').addEventListener('click', clearFieldsOnly);
         
-        // Textarea inicialmente vacío
         document.getElementById('rawTextInput').value = '';
     });
 </script>
